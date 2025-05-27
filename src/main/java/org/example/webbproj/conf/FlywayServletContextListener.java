@@ -11,7 +11,7 @@ public class FlywayServletContextListener implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent sce) {
 
-        String url = "jdbc:postgresql://localhost:5432/webbproj";
+        String url = System.getenv("DB_URL") == null ? "jdbc:postgresql://localhost:5432/webbproj" : System.getenv("DB_URL");
         String user = "postgres";
         String password = "123";
 

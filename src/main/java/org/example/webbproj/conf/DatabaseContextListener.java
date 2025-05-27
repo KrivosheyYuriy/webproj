@@ -16,9 +16,11 @@ public class DatabaseContextListener implements ServletContextListener {
         try {
             Class.forName("org.postgresql.Driver");
 
-            String url = "jdbc:postgresql://localhost:5432/webbproj";
+            String url = System.getenv("DB_URL") == null ? "jdbc:postgresql://localhost:5432/webbproj" : System.getenv("DB_URL");
             String user = "postgres";
             String password = "123";
+
+            System.out.println(System.getenv("DB_URL"));
 
             connection = DriverManager.getConnection(url, user, password);
 
