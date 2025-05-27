@@ -2,16 +2,27 @@ package org.example.webbproj.dao.formDao;
 
 import org.example.webbproj.entity.Form;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 
 public class FormDaoImpl implements FormDao {
     private final Connection connection;
 
     public FormDaoImpl(Connection connection) {
         this.connection = connection;
+    }
+
+    @Override
+    public Form findFormByUserId(long id) throws SQLException {
+        String sql = "select * from form where userid = ?";
+        try(PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, id);
+            try(ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return extractForm(resultSet);
+                }
+            }
+        }
+        return null;
     }
 
     @Override
@@ -30,13 +41,15 @@ public class FormDaoImpl implements FormDao {
 
     @Override
     public void createForm(Form form) throws SQLException {
-        String sql = "insert into form(userid, fullname, phone, email, taskdescription) values(?, ?, ?, ?, ?)";
+        String sql = "insert into form(userid, fullname, phone, email, taskdescription, gender, birthday) values(?, ?, ?, ?, ?, ?, ?)";
         try(PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, form.getUserId());
             statement.setString(2, form.getFullName());
             statement.setString(3, form.getPhone());
             statement.setString(4, form.getEmail());
             statement.setString(5, form.getTaskDescription());
+            statement.setString(6, form.getGender());
+            statement.setDate(7, new Date(form.getBirthday().getTime()));
             System.out.println(statement);
             statement.execute();
         }
@@ -44,13 +57,15 @@ public class FormDaoImpl implements FormDao {
 
     @Override
     public void updateForm(Form form) throws SQLException {
-        String sql = "update form set fullName=?, phone=?, email=?, taskDescription=? where id=?";
+        String sql = "update form set fullName=?, phone=?, email=?, taskDescription=?, gender=?, birthday=? where id=?";
         try(PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, form.getFullName());
             statement.setString(2, form.getPhone());
             statement.setString(3, form.getEmail());
             statement.setString(4, form.getTaskDescription());
-            statement.setLong(5, form.getId());
+            statement.setString(5, form.getGender());
+            statement.setDate(6, new Date(form.getBirthday().getTime()));
+            statement.setLong(7, form.getId());
             statement.executeUpdate();
         }
     }
@@ -71,7 +86,9 @@ public class FormDaoImpl implements FormDao {
                 resultSet.getString("fullName"),
                 resultSet.getString("phone"),
                 resultSet.getString("email"),
-                resultSet.getString("taskDescription")
+                resultSet.getString("taskDescription"),
+                resultSet.getDate("birthday"),
+                resultSet.getString("gender")
         );
     }
 }

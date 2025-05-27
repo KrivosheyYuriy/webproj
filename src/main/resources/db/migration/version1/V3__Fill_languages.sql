@@ -1,0 +1,11 @@
+insert into languages values (1, 'Pascal'),
+                            (2, 'C'),
+                            (3, 'C++'),
+                            (4, 'JavaScript'),
+                            (5, 'PHP'),
+                            (6, 'Python'),
+                            (7, 'Java'),
+                            (8, 'Haskel'),
+                            (9, 'Clojure'),
+                            (10, 'Prolog'),
+                            (11, 'Scala');

@@ -11,6 +11,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.example.webbproj.dao.formDao.FormDao;
 import org.example.webbproj.dao.formDao.FormDaoImpl;
+import org.example.webbproj.dao.formLanguagesDao.FormLanguageDao;
+import org.example.webbproj.dao.formLanguagesDao.FormLanguageDaoImpl;
 import org.example.webbproj.dao.userDao.UserDao;
 import org.example.webbproj.dao.userDao.UserDaoImpl;
 import org.example.webbproj.entity.Form;
@@ -22,6 +24,8 @@ import org.flywaydb.core.internal.util.Pair;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Date;
+import java.util.List;
 
 @WebServlet(name = "formServlet", value = "/form")
 public class FormServlet extends HttpServlet {
@@ -53,17 +57,20 @@ public class FormServlet extends HttpServlet {
         if (connection != null) {
             UserDao userDao = new UserDaoImpl(connection);
             FormDao formDao = new FormDaoImpl(connection);
-
+            FormLanguageDao formLanguageDao = new FormLanguageDaoImpl(connection);
             try {
                 User user = userDao.findUserByUsername(username);
                 long id = user.getId();
 
-                Form form = formDao.findFormById(id);
+                Form form = formDao.findFormByUserId(id);
                 if (form == null) {
                     resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                     req.setAttribute("errors", "Internal Server Error");
                     return;
                 }
+                List<Long> formLanguages = formLanguageDao.getLanguageIdsByFormId(form.getId());
+                System.out.println(formLanguages);
+                form.setLanguagesId(formLanguages);
 
                 ObjectMapper mapper = new ObjectMapper();
                 String json = mapper.writeValueAsString(form);
@@ -90,18 +97,27 @@ public class FormServlet extends HttpServlet {
                     String email = formData.getEmail();
                     String phone = formData.getPhone();
                     String taskDescription = formData.getTaskDescription();
-                    String errors = FormValidator.validateForm(fullName, phone, email);
+                    Date birthday = formData.getBirthday();
+                    String gender = formData.getGender();
+                    List<Long> languagesId = formData.getLanguagesId();
+
+                    String errors = FormValidator.validateForm(formData);
 
                     if (errors.isEmpty()) {
 
                         if (connection != null) {
                             FormDao formDao = new FormDaoImpl(connection);
                             UserDao userDao = new UserDaoImpl(connection);
+                            FormLanguageDao formLanguageDao = new FormLanguageDaoImpl(connection);
                             try {
                                 Pair<String, String> data = userDao.createUser();
                                 long id = userDao.findUserByUsername(data.getLeft()).getId();
 
-                                formDao.createForm(new Form(null, id, fullName, phone, email, taskDescription));
+                                formDao.createForm(new Form(null, id, fullName, phone, email,
+                                        taskDescription, birthday, gender));
+                                Form form = formDao.findFormByUserId(id);
+
+                                formLanguageDao.updateFormLanguages(form.getId(), languagesId);
                                 UserData userData = new UserData(data.getLeft(), data.getRight());
 
                                 ObjectMapper mapper = new ObjectMapper();
@@ -122,16 +138,24 @@ public class FormServlet extends HttpServlet {
                     }
                     else {
                         resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        ObjectMapper mapper = new ObjectMapper();
+                        String json = mapper.writeValueAsString(errors);
+                        resp.getWriter().write(json);
+                        System.out.println("Invalid JSON format");
+                        System.out.println(errors);
                         req.setAttribute("errors", errors);
                     }
                 }
                 else {
                     resp.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 Bad Request
+                    System.out.println("Invalid JSON format or empty request body");
                     resp.getWriter().write("Invalid JSON format or empty request body.");
                 }
             }
             catch (IOException e) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 Bad Request
+                System.out.println("Error parsing JSON:");
+                System.out.println(e.getMessage());
                 resp.getWriter().write("Error parsing JSON: " + e.getMessage());
             }
         }
@@ -153,6 +177,9 @@ public class FormServlet extends HttpServlet {
                     String email = data.getEmail();
                     String phone = data.getPhone();
                     String taskDescription = data.getTaskDescription();
+                    Date birthday = data.getBirthday();
+                    String gender = data.getGender();
+                    List<Long> languagesId = data.getLanguagesId();
 
                     HttpSession session = req.getSession(false); // Не создавать сессию, если ее нет
                     if (session == null || session.getAttribute("username") == null) {
@@ -163,7 +190,7 @@ public class FormServlet extends HttpServlet {
 
                     String username = (String) session.getAttribute("username");
 
-                    String errors = FormValidator.validateForm(fullName, phone, email);
+                    String errors = FormValidator.validateForm(data);
                     if (errors.isEmpty()) {
                         if (connection != null) {
                             FormDao formDao = new FormDaoImpl(connection);
@@ -177,7 +204,8 @@ public class FormServlet extends HttpServlet {
                                 }
 
                                 long id = user.getId();
-                                Form form = formDao.findFormById(id);
+                                Form form = formDao.findFormByUserId(id);
+                                FormLanguageDao formLanguageDao = new FormLanguageDaoImpl(connection);
                                 if (form == null) {
                                     resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                                     req.setAttribute("errors", "Internal Server Error");
@@ -188,8 +216,12 @@ public class FormServlet extends HttpServlet {
                                 form.setPhone(phone);
                                 form.setTaskDescription(taskDescription);
                                 form.setFullName(fullName);
+                                form.setGender(gender);
+                                form.setLanguagesId(languagesId);
+                                form.setBirthday(birthday);
 
                                 formDao.updateForm(form);
+                                formLanguageDao.updateFormLanguages(id, languagesId);
                                 resp.setStatus(HttpServletResponse.SC_CREATED);
                             } catch (SQLException e) {
                                 System.err.println(e.getMessage());

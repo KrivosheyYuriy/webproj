@@ -30,17 +30,16 @@ public class AuthFilter implements Filter {
         HttpServletResponse httpResponse = getHttpServletResponse((HttpServletResponse) response);
         httpResponse.setStatus(HttpServletResponse.SC_OK);
 
-        // Обрабатываем OPTIONS запросы
         if ("OPTIONS".equalsIgnoreCase(httpRequest.getMethod())) {
-            httpResponse.setStatus(HttpServletResponse.SC_OK); // Или SC_NO_CONTENT
-            return; // Важно: НЕ вызываем chain.doFilter() для OPTIONS!
+            httpResponse.setStatus(HttpServletResponse.SC_OK);
+            return;
         }
 
         String path = httpRequest.getRequestURI().substring(
-                httpRequest.getContextPath().length()).replaceAll("[/]+$", ""); // Получаем путь запроса
+                httpRequest.getContextPath().length()).replaceAll("[/]+$", "");
 
         boolean allowedPath = ALLOWED_PATHS.contains(path) ||
-                ("/form".equals(path) && httpRequest.getMethod().equals("POST")); // Проверяем, разрешен ли путь без авторизации
+                ("/form".equals(path) && httpRequest.getMethod().equals("POST"));
         if (allowedPath) {
             // Путь разрешен, пропускаем дальше
             chain.doFilter(request, response);
@@ -59,7 +58,18 @@ public class AuthFilter implements Filter {
 
         try {
             String username = JWTUtil.verifyToken(token);
-            // Добавляем пользователя в запрос, чтобы сервлет мог его использовать (необязательно, но удобно)
+
+            if (username == null) {
+                httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                httpResponse.getWriter().println("Missing or invalid Authorization header");
+                return;
+            }
+
+            if (path.startsWith("/admin") && !username.startsWith("admin")) {
+                httpResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                httpResponse.getWriter().println("Path not found");
+                return;
+            }
 
             HttpSession session = httpRequest.getSession();
             session.setAttribute("username", username);

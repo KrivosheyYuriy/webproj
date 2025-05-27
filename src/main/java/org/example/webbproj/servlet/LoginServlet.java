@@ -8,8 +8,11 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.example.webbproj.dao.adminDao.AdminDao;
+import org.example.webbproj.dao.adminDao.AdminDaoImpl;
 import org.example.webbproj.dao.userDao.UserDao;
 import org.example.webbproj.dao.userDao.UserDaoImpl;
+import org.example.webbproj.entity.Admin;
 import org.example.webbproj.entity.User;
 import org.example.webbproj.util.JWTUtil;
 import org.example.webbproj.util.PasswordUtil;
@@ -52,14 +55,16 @@ public class LoginServlet extends HttpServlet {
 
                     if (connection != null) {
                         UserDao userDao = new UserDaoImpl(connection);
+                        AdminDao adminDao = new AdminDaoImpl(connection);
                         try {
                             User user = userDao.findUserByUsername(username);
-                            if (user == null) {
+                            Admin admin = adminDao.findAdminByUsername(username);
+                            if (user == null && admin == null) {
                                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                                 response.getWriter().println("Invalid credentials.");
                             }
                             else {
-                                String hashedPassword = user.getPassword();
+                                String hashedPassword = user != null ? user.getPassword() : admin.getPassword();
                                 if (PasswordUtil.verifyPassword(password, hashedPassword, "")) {
                                     String token = JWTUtil.generateToken(username);
 
@@ -77,6 +82,8 @@ public class LoginServlet extends HttpServlet {
                             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                             response.getWriter().println("Error logging in: " + e.getMessage());
                         }
+
+
                     }
                     else {
                         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
