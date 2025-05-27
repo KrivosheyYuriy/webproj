@@ -11,13 +11,17 @@ public class FlywayServletContextListener implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent sce) {
 
-        String url = System.getenv("DB_URL") == null ? "jdbc:postgresql://localhost:5432/webbproj" : System.getenv("DB_URL");
-        System.out.println(System.getenv("DB_URL"));
-        String user = "postgres";
-        String password = "123";
+        String dbHost = System.getenv("DB_HOST");
+        int dbPort = Integer.parseInt(System.getenv("DB_PORT"));
+        String dbName = System.getenv("DB_NAME");
+        String dbUser = System.getenv("DB_USER");
+        String dbPassword = System.getenv("DB_PASSWORD");
+
+        String url = String.format("jdbc:postgresql://%s:%d/%s", dbHost, dbPort, dbName);
+        System.out.println("Flyway connecting to: " + url); // Для отладки
 
         Flyway flyway = Flyway.configure()
-                .dataSource(url, user, password)
+                .dataSource(url, dbUser, dbPassword)
                 .locations("classpath:db/migration")
                 .load();
 

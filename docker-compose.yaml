@@ -16,7 +16,6 @@ services:
       - DB_NAME=webbproj
       - DB_USER=postgres
       - DB_PASSWORD=123
-      - DB_URL=jdbc:postgresql://db:5432/webbproj
     networks:
       - app_network
     restart: always

@@ -16,13 +16,15 @@ public class DatabaseContextListener implements ServletContextListener {
         try {
             Class.forName("org.postgresql.Driver");
 
-            String url = System.getenv("DB_URL") == null ? "jdbc:postgresql://localhost:5432/webbproj" : System.getenv("DB_URL");
-            String user = "postgres";
-            String password = "123";
+            String dbHost = System.getenv("DB_HOST");
+            int dbPort = Integer.parseInt(System.getenv("DB_PORT"));  // Важно!
+            String dbName = System.getenv("DB_NAME");
+            String dbUser = System.getenv("DB_USER");
+            String dbPassword = System.getenv("DB_PASSWORD");
 
-            System.out.println(System.getenv("DB_URL"));
-
-            connection = DriverManager.getConnection(url, user, password);
+            String url = String.format("jdbc:postgresql://%s:%d/%s", dbHost, dbPort, dbName);
+            System.out.println("Connecting to: " + url); // Для отладки
+            connection = DriverManager.getConnection(url, dbUser, dbPassword);
 
             sce.getServletContext().setAttribute("dbConnection", connection);
             System.out.println("Database connection initialized.");
